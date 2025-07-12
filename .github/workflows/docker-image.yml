@@ -2,7 +2,10 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
 
 jobs:
   test-code:
@@ -28,14 +31,49 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: "1.24"
         name: Setup Go
 
+      - name: Cache libmongocrypt build
+        id: cache-libmongocrypt
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/local_install
+          key: ${{ runner.os }}-libmongocrypt-1.14.1
+
+      - name: Install libraries
+        if: steps.cache-libmongocrypt.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget cmake libssl-dev build-essential ninja-build
+
+      - name: Checkout libmongocrypt
+        if: steps.cache-libmongocrypt.outputs.cache-hit != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: mongodb/libmongocrypt
+          ref: 1.14.1
+          path: libmongocrypt
+
+      - name: Build libmongocrypt
+        if: steps.cache-libmongocrypt.outputs.cache-hit != 'true'
+        run: |
+          cd libmongocrypt
+          mkdir cmake-build
+          cd cmake-build
+          cmake -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/local_install -DBUILD_VERSION=1.14.1 -GNinja ..
+          ninja install
+
       - name: Test code
-        run: go test -v -race -covermode=atomic -coverprofile=coverage.out ./...
+        run: go test -v -race -covermode=atomic -coverprofile=coverage.out -tags cse ./...
         env:
           MONGO_INITDB_ROOT_USERNAME: root
           MONGO_INITDB_ROOT_PASSWORD: example
+          LD_LIBRARY_PATH: ${{ github.workspace }}/local_install/lib
+          PKG_CONFIG_PATH: ${{ github.workspace }}/local_install/lib/pkgconfig
+          CGO_LDFLAGS: "-L${{ github.workspace }}/local_install/lib"
+          CGO_CFLAGS: "-I${{ github.workspace }}/local_install/include"
+
       - uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
