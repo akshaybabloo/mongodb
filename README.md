@@ -12,3 +12,11 @@ Use Go modules
 ```
 go get github.com/akshaybabloo/mongodb/v6
 ```
+
+## Running Tests
+
+Make sure Docker is installed, then run:
+
+```sh
+docker compose up --build app
+```
