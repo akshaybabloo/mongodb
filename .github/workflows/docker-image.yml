@@ -36,7 +36,7 @@ jobs:
 
       - name: Cache libmongocrypt build
         id: cache-libmongocrypt
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ github.workspace }}/local_install
           key: ${{ runner.os }}-libmongocrypt-1.14.1
