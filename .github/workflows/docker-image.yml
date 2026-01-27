@@ -26,7 +26,7 @@ jobs:
           --health-retries=5
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         name: Checkout code
 
       - uses: actions/setup-go@v6
@@ -49,7 +49,7 @@ jobs:
 
       - name: Checkout libmongocrypt
         if: steps.cache-libmongocrypt.outputs.cache-hit != 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: mongodb/libmongocrypt
           ref: 1.14.1
