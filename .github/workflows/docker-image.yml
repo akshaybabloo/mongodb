@@ -39,7 +39,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ${{ github.workspace }}/local_install
-          key: ${{ runner.os }}-libmongocrypt-1.14.1
+          key: ${{ runner.os }}-libmongocrypt-1.17.1
 
       - name: Install libraries
         if: steps.cache-libmongocrypt.outputs.cache-hit != 'true'
@@ -52,7 +52,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: mongodb/libmongocrypt
-          ref: 1.14.1
+          ref: 1.17.1
           path: libmongocrypt
 
       - name: Build libmongocrypt
@@ -61,7 +61,7 @@ jobs:
           cd libmongocrypt
           mkdir cmake-build
           cd cmake-build
-          cmake -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/local_install -DBUILD_VERSION=1.14.1 -GNinja ..
+          cmake -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/local_install -DBUILD_VERSION=1.17.1-GNinja ..
           ninja install
 
       - name: Test code
