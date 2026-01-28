@@ -61,7 +61,7 @@ jobs:
           cd libmongocrypt
           mkdir cmake-build
           cd cmake-build
-          cmake -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/local_install -DBUILD_VERSION=1.17.1-GNinja ..
+          cmake -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/local_install -DBUILD_VERSION=1.17.1 -GNinja ..
           ninja install
 
       - name: Test code
