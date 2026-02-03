@@ -211,7 +211,7 @@ func (c *Client) connect() error {
 }
 
 // connectUnsafe establishes connection to MongoDB without acquiring the mutex
-// Caller must hold the write lock before calling this method
+// Caller must hold the write lock (mutex.Lock) before calling this method
 func (c *Client) connectUnsafe() error {
 	if c.connected {
 		return nil
@@ -269,7 +269,7 @@ func (c *Client) Close() error {
 func (c *Client) getClient() (*mongo.Client, error) {
 	c.mutex.RLock()
 	if c.connected && c.client != nil {
-		defer c.mutex.RUnlock()
+		c.mutex.RUnlock()
 		return c.client, nil
 	}
 	c.mutex.RUnlock()
@@ -277,7 +277,7 @@ func (c *Client) getClient() (*mongo.Client, error) {
 	// Need to reconnect - upgrade to write lock
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	
+
 	// Double-check after acquiring write lock (another goroutine may have connected)
 	if c.connected && c.client != nil {
 		return c.client, nil
@@ -512,7 +512,7 @@ func (c *Client) Exists(ctx context.Context, collectionName string, id string) (
 		return false, err
 	}
 
-	// Use FindOne with a limit to improve performance over CountDocuments
+	// Use FindOne to improve performance over CountDocuments
 	err = collection.FindOne(ctx, bson.M{"_id": id}).Err()
 	if err == mongo.ErrNoDocuments {
 		return false, nil
@@ -535,7 +535,7 @@ func (c *Client) ExistsCustom(ctx context.Context, collectionName string, filter
 		return false, err
 	}
 
-	// Use FindOne with a limit to improve performance over CountDocuments
+	// Use FindOne to improve performance over CountDocuments
 	err = collection.FindOne(ctx, filter).Err()
 	if err == mongo.ErrNoDocuments {
 		return false, nil
