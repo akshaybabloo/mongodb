@@ -342,7 +342,7 @@ func (c *Client) Update(ctx context.Context, collectionName string, id string, d
 		return nil, err
 	}
 
-	return collection.UpdateOne(ctx, bson.M{"_id": id}, bson.D{{"$set", data}})
+	return collection.UpdateOne(ctx, bson.M{"_id": id}, bson.D{{Key: "$set", Value: data}})
 }
 
 // UpdateCustom updates a document using a custom filter
@@ -359,7 +359,7 @@ func (c *Client) UpdateCustom(ctx context.Context, collectionName string, filter
 		return nil, err
 	}
 
-	return collection.UpdateOne(ctx, filter, bson.D{{"$set", data}}, updateOptions...)
+	return collection.UpdateOne(ctx, filter, bson.D{{Key: "$set", Value: data}}, updateOptions...)
 }
 
 // UpdateMany updates multiple documents using a filter
@@ -376,7 +376,7 @@ func (c *Client) UpdateMany(ctx context.Context, collectionName string, filter i
 		return nil, err
 	}
 
-	return collection.UpdateMany(ctx, filter, bson.D{{"$set", data}}, updateOptions...)
+	return collection.UpdateMany(ctx, filter, bson.D{{Key: "$set", Value: data}}, updateOptions...)
 }
 
 // Delete deletes a document by ID
@@ -634,7 +634,7 @@ func (c *Client) Encrypt(ctx context.Context, dataKeyID string, algorithm string
 	// To encrypt a single value, it must be converted to a bson.RawValue.
 	// The standard way to do this is to wrap it in a document, marshal it,
 	// and then look up the raw value from the marshalled document.
-	docWrapper := bson.D{{"v", value}}
+	docWrapper := bson.D{{Key: "v", Value: value}}
 	marshalledDoc, err := bson.Marshal(docWrapper)
 	if err != nil {
 		return bson.Binary{}, fmt.Errorf("failed to marshal value into BSON document: %w", err)
