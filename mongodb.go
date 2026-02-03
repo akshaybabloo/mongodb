@@ -512,7 +512,6 @@ func (c *Client) Exists(ctx context.Context, collectionName string, id string) (
 		return false, err
 	}
 
-	// Use FindOne to improve performance over CountDocuments
 	err = collection.FindOne(ctx, bson.M{"_id": id}).Err()
 	if err == mongo.ErrNoDocuments {
 		return false, nil
@@ -535,7 +534,6 @@ func (c *Client) ExistsCustom(ctx context.Context, collectionName string, filter
 		return false, err
 	}
 
-	// Use FindOne to improve performance over CountDocuments
 	err = collection.FindOne(ctx, filter).Err()
 	if err == mongo.ErrNoDocuments {
 		return false, nil
