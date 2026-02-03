@@ -5,7 +5,7 @@
 
 A simple wrapper for Go's MongoDB Driver
 
-## Instillation
+## Installation
 
 Use Go modules
 

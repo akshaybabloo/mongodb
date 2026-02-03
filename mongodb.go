@@ -194,6 +194,8 @@ func NewMongoClientWithEncryption(connectionURL string, databaseName string, enc
 
 	clientEncryption, err := mongo.NewClientEncryption(c.client, clientEncryptionOpts)
 	if err != nil {
+		// Clean up the client connection on encryption setup failure
+		c.Close()
 		return nil, fmt.Errorf("failed to create client encryption: %w", err)
 	}
 	c.clientEncryption = clientEncryption
@@ -205,7 +207,12 @@ func NewMongoClientWithEncryption(connectionURL string, databaseName string, enc
 func (c *Client) connect() error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
+	return c.connectUnsafe()
+}
 
+// connectUnsafe establishes connection to MongoDB without acquiring the mutex
+// Caller must hold the write lock (mutex.Lock) before calling this method
+func (c *Client) connectUnsafe() error {
 	if c.connected {
 		return nil
 	}
@@ -267,13 +274,20 @@ func (c *Client) getClient() (*mongo.Client, error) {
 	}
 	c.mutex.RUnlock()
 
-	// Need to reconnect
-	if err := c.connect(); err != nil {
+	// Need to reconnect - upgrade to write lock
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	// Double-check after acquiring write lock (another goroutine may have connected)
+	if c.connected && c.client != nil {
+		return c.client, nil
+	}
+
+	// Now safely connect without releasing the lock
+	if err := c.connectUnsafe(); err != nil {
 		return nil, err
 	}
 
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
 	return c.client, nil
 }
 
@@ -342,7 +356,7 @@ func (c *Client) Update(ctx context.Context, collectionName string, id string, d
 		return nil, err
 	}
 
-	return collection.UpdateOne(ctx, bson.M{"_id": id}, bson.D{{"$set", data}})
+	return collection.UpdateOne(ctx, bson.M{"_id": id}, bson.D{{Key: "$set", Value: data}})
 }
 
 // UpdateCustom updates a document using a custom filter
@@ -359,7 +373,7 @@ func (c *Client) UpdateCustom(ctx context.Context, collectionName string, filter
 		return nil, err
 	}
 
-	return collection.UpdateOne(ctx, filter, bson.D{{"$set", data}}, updateOptions...)
+	return collection.UpdateOne(ctx, filter, bson.D{{Key: "$set", Value: data}}, updateOptions...)
 }
 
 // UpdateMany updates multiple documents using a filter
@@ -376,7 +390,7 @@ func (c *Client) UpdateMany(ctx context.Context, collectionName string, filter i
 		return nil, err
 	}
 
-	return collection.UpdateMany(ctx, filter, bson.D{{"$set", data}}, updateOptions...)
+	return collection.UpdateMany(ctx, filter, bson.D{{Key: "$set", Value: data}}, updateOptions...)
 }
 
 // Delete deletes a document by ID
@@ -498,12 +512,15 @@ func (c *Client) Exists(ctx context.Context, collectionName string, id string) (
 		return false, err
 	}
 
-	count, err := collection.CountDocuments(ctx, bson.M{"_id": id})
+	err = collection.FindOne(ctx, bson.M{"_id": id}).Err()
+	if err == mongo.ErrNoDocuments {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
 
-	return count > 0, nil
+	return true, nil
 }
 
 // ExistsCustom checks if a document exists using a custom filter
@@ -517,12 +534,15 @@ func (c *Client) ExistsCustom(ctx context.Context, collectionName string, filter
 		return false, err
 	}
 
-	count, err := collection.CountDocuments(ctx, filter)
+	err = collection.FindOne(ctx, filter).Err()
+	if err == mongo.ErrNoDocuments {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
 
-	return count > 0, nil
+	return true, nil
 }
 
 // Aggregate performs an aggregation operation on a collection
@@ -634,7 +654,7 @@ func (c *Client) Encrypt(ctx context.Context, dataKeyID string, algorithm string
 	// To encrypt a single value, it must be converted to a bson.RawValue.
 	// The standard way to do this is to wrap it in a document, marshal it,
 	// and then look up the raw value from the marshalled document.
-	docWrapper := bson.D{{"v", value}}
+	docWrapper := bson.D{{Key: "v", Value: value}}
 	marshalledDoc, err := bson.Marshal(docWrapper)
 	if err != nil {
 		return bson.Binary{}, fmt.Errorf("failed to marshal value into BSON document: %w", err)
