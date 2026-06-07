@@ -74,7 +74,7 @@ jobs:
           CGO_LDFLAGS: "-L${{ github.workspace }}/local_install/lib"
           CGO_CFLAGS: "-I${{ github.workspace }}/local_install/include"
 
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.out
