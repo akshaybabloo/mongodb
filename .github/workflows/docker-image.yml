@@ -7,6 +7,9 @@ on:
     branches: [master]
   workflow_dispatch:
 
+env:
+  LIBMONGOCRYPT_VERSION: "1.21.1"
+
 jobs:
   test-code:
     runs-on: ubuntu-latest
@@ -39,20 +42,20 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ github.workspace }}/local_install
-          key: ${{ runner.os }}-libmongocrypt-1.17.1
+          key: ${{ runner.os }}-libmongocrypt-${{ env.LIBMONGOCRYPT_VERSION }}
 
       - name: Install libraries
         if: steps.cache-libmongocrypt.outputs.cache-hit != 'true'
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget cmake libssl-dev build-essential ninja-build
+          sudo apt-get install -y wget cmake libssl-dev build-essential ninja-build libsasl2-dev
 
       - name: Checkout libmongocrypt
         if: steps.cache-libmongocrypt.outputs.cache-hit != 'true'
         uses: actions/checkout@v7
         with:
           repository: mongodb/libmongocrypt
-          ref: 1.17.1
+          ref: ${{ env.LIBMONGOCRYPT_VERSION }}
           path: libmongocrypt
 
       - name: Build libmongocrypt
@@ -61,7 +64,7 @@ jobs:
           cd libmongocrypt
           mkdir cmake-build
           cd cmake-build
-          cmake -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/local_install -DBUILD_VERSION=1.17.1 -GNinja ..
+          cmake -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/local_install -DBUILD_VERSION=${{ env.LIBMONGOCRYPT_VERSION }} -GNinja ..
           ninja install
 
       - name: Test code
