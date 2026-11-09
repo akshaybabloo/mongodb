@@ -37,9 +37,9 @@ jobs:
           go-version: "1.27"
         name: Setup Go
 
-      - name: Cache libmongocrypt build
+      - name: Restore libmongocrypt build
         id: cache-libmongocrypt
-        uses: actions/cache@v6
+        uses: actions/cache/restore@v6
         with:
           path: ${{ github.workspace }}/local_install
           key: ${{ runner.os }}-libmongocrypt-${{ env.LIBMONGOCRYPT_VERSION }}
@@ -66,6 +66,15 @@ jobs:
           cd cmake-build
           cmake -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/local_install -DBUILD_VERSION=${{ env.LIBMONGOCRYPT_VERSION }} -GNinja ..
           ninja install
+
+      # Only save from master: caches saved by PRs are scoped to that PR and
+      # duplicate the master entry. PRs can still restore master's cache.
+      - name: Save libmongocrypt build
+        if: github.ref == 'refs/heads/master' && steps.cache-libmongocrypt.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ github.workspace }}/local_install
+          key: ${{ steps.cache-libmongocrypt.outputs.cache-primary-key }}
 
       - name: Test code
         run: go test -v -race -covermode=atomic -coverprofile=coverage.out -tags cse ./...
