@@ -2,7 +2,7 @@ module github.com/akshaybabloo/mongodb/v6
 
 go 1.25.0
 
-require go.mongodb.org/mongo-driver/v2 v2.10.0
+require go.mongodb.org/mongo-driver/v2 v2.10.1
 
 require (
 	github.com/klauspost/compress v1.20.3 // indirect
